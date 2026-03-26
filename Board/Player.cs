@@ -1,4 +1,12 @@
-﻿using System;
+﻿///
+/// ETML
+/// Author: GT FID1
+/// Date: 19.03.26
+/// 
+/// Minesweeper
+///
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,7 +15,7 @@ using System.Threading.Tasks;
 namespace Minesweeper.Board
 {
     /// <summary>
-    /// Représente un joueur
+    /// Represents a player
     /// </summary>
     internal class Player
     {

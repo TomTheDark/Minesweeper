@@ -1,12 +1,12 @@
 ﻿///
 /// ETML
-/// Author: Thibault Gugler FID1
+/// Author: GT FID1
 /// Date: 19.03.26
-/// 
+///
 /// Minesweeper
-/// 
+///
 
-// Table ASCII : https://sebastienguillon.com/test/jeux-de-caracteres/windows-ascii-fr.html
+// ASCII Table : https://sebastienguillon.com/test/jeux-de-caracteres/windows-ascii-fr.html
 
 // ╣ ║ ╗ ╝ ╚ ╔ ╩ ╦ ╠ ═ ╬
 

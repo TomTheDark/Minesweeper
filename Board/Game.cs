@@ -1,49 +1,87 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Minesweeper.Board;
+﻿///
+/// ETML
+/// Author: GT FID1
+/// Date: 19.03.26
+///
+/// Minesweeper
+///
+
+using System;
+using Minesweeper.UI;
 
 namespace Minesweeper.Board
 {
     /// <summary>
-    /// Gère le flux global et la logique du jeu
+    /// Manages the global flow and game logic
     /// </summary>
     internal class Game
     {
-        private const byte MIN_ROWS = 6, MAX_ROWS = 30;
-        private const byte MIN_COLUMNS = 6, MAX_COLUMNS = 30;
-        private const byte WIN_LENGTH = 200, WIN_HEIGHT = 60;
+        private const int MIN_ROWS = 6, MAX_ROWS = 30;
+        private const int MIN_COLUMNS = 6, MAX_COLUMNS = 30;
 
         private Grid board;
         private Player player1;
         private Player player2;
         private Player currentPlayer;
+        private Menu menu;
 
         public Game()
         {
-            {
-                Console.SetWindowSize(WIN_LENGTH, WIN_HEIGHT);
-            }
+            menu = new Menu();
 
-            player1 = new Player(1, "Joueur 1", ConsoleColor.Red);
-            player2 = new Player(2, "Joueur 2", ConsoleColor.Yellow);
+            player1 = new Player(1, "Player 1", ConsoleColor.Red);
+            player2 = new Player(2, "Player 2", ConsoleColor.Yellow);
             currentPlayer = player1;
         }
 
         public void Start()
         {
-            DisplayTitle();
-            int rows = AskParameter("lignes", MIN_ROWS, MAX_ROWS);
-            int cols = AskParameter("colonnes", MIN_COLUMNS, MAX_COLUMNS);
+            menu.DisplayTitle();
+            menu.DisplayCompatibilityWarning();
+
+            int rows = menu.AskInteger("Please enter the number of rows", MIN_ROWS, MAX_ROWS);
+            int cols = menu.AskInteger("Please enter the number of columns", MIN_COLUMNS, MAX_COLUMNS);
+            
+            // Difficulty selection
+            Console.WriteLine("   Please enter the difficulty for your game");
+            Console.WriteLine("   knowing that :");
+            Console.WriteLine("      1 --> Easy");
+            Console.WriteLine("      2 --> Medium");
+            Console.WriteLine("      3 --> Hard");
+            int difficulty = menu.AskInteger("Your difficulty :", 1, 3);
+
+            // Calculate mines
+            // Formula : Surface = (rows / 2) + 1 * (cols / 2) + 1
+            // This formula from the image seems to mean: ((rows / 2) + 1) * ((cols / 2) + 1)
+            int surface = ((rows / 2) + 1) * ((cols / 2) + 1);
+            double percentage = 0;
+            string difficultyName = "";
+
+            switch (difficulty)
+            {
+                case 1:
+                    percentage = 0.10;
+                    difficultyName = "Easy";
+                    break;
+                case 2:
+                    percentage = 0.25;
+                    difficultyName = "Medium";
+                    break;
+                case 3:
+                    percentage = 0.40;
+                    difficultyName = "Hard";
+                    break;
+            }
+
+            int mines = (int)Math.Floor(surface * percentage);
 
             board = new Grid(rows, cols);
 
             Console.Clear();
-            DisplayTitle();
+            menu.DisplayTitle();
+            menu.DisplayMineInfo(mines, difficultyName);
             board.Draw();
-            DisplayHelper();
+            menu.DisplayHelper(cols);
 
             PlayLoop();
         }
@@ -81,7 +119,7 @@ namespace Minesweeper.Board
             {
                 keyInfo = Console.ReadKey(true);
                 Console.SetCursorPosition(basePosLeft, basePosTop);
-                Console.Write(" "); // Efface l'ancien curseur
+                Console.Write(" "); // Delete old cursor
 
                 switch (keyInfo.Key)
                 {
@@ -105,25 +143,25 @@ namespace Minesweeper.Board
 
             int targetRow = board.GetLowestAvailableRow(currentColumn);
 
-            if (targetRow == -1) // Colonne pleine
+            if (targetRow == -1) // Column full
             {
                 Console.SetCursorPosition(basePosLeft, basePosTop);
                 Console.Write(" ");
-                return false; // Le tour n'est pas consommé
+                return false; // The turn is not consumed
             }
 
-            // Efface le curseur du haut
+            // Delete top cursor
             Console.SetCursorPosition(basePosLeft, basePosTop);
             Console.Write(" ");
 
-            // Place le pion graphiquement et logiquement
+            // Place the pawn graphically and logically
             int dropPosTop = 11 + targetRow * STEP_VERTICAL;
             Console.SetCursorPosition(basePosLeft, dropPosTop);
             currentPlayer.DrawPawn();
             board.PlacePawn(targetRow, currentColumn, currentPlayer.Id);
             currentPlayer.MovesCount++;
 
-            // Vérifie la victoire
+            // Check victory
             if (board.CheckVictory(targetRow, currentColumn, currentPlayer.Id))
             {
                 HandleVictory();
@@ -141,91 +179,20 @@ namespace Minesweeper.Board
         private void HandleVictory()
         {
             Console.SetCursorPosition(0, board.Rows * 2 + 15);
-            Console.ForegroundColor = currentPlayer.Color;
-            Console.WriteLine($"\n   Bravo! Le {currentPlayer.Name} a gagné en {currentPlayer.MovesCount} coups!");
-            Console.ResetColor();
+            menu.DisplayVictory(currentPlayer);
 
-            Console.WriteLine("\n   Voulez-vous recommencer? (O / N):");
-            ConsoleKeyInfo restart;
-            do
+            if (menu.AskReplay())
             {
-                restart = Console.ReadKey(true);
-                if (restart.Key == ConsoleKey.O)
-                {
-                    Console.Clear();
-                    // Réinitialisation pour rejouer
-                    currentPlayer = player1;
-                    player1.MovesCount = 0;
-                    player2.MovesCount = 0;
-                    Start();
-                    return;
-                }
-                else if (restart.Key == ConsoleKey.N)
-                {
-                    Console.WriteLine("\n   Merci d'avoir joué. Appuyez sur une touche pour quitter.");
-                    Console.ReadKey();
-                    Environment.Exit(0);
-                }
-            } while (true);
-        }
-
-        private void DisplayTitle()
-        {
-            Console.WriteLine("\n   ╔════════════════════════════════════════╗");
-            Console.WriteLine("   ║    Bienvenue dans le jeu Puissance 4   ║");
-            Console.WriteLine("   ║    Réalisé par Thibault Gugler         ║");
-            Console.WriteLine("   ╚════════════════════════════════════════╝\n");
-        }
-
-        private int AskParameter(string paramName, int min, int max)
-        {
-            int value;
-            bool isValid;
-
-            if (paramName == "lignes")
-            {
-                Console.ForegroundColor = ConsoleColor.DarkYellow;
-                Console.Write($"   !! Avant de jouer, si vous utilisez Windows 11\n   !! vérifiez que vous utilisez bien l'Hôte de la console Windows\n   !! ou que la taille de votre console soit suffisante\n\n");
-                Console.ResetColor();
+                 // Reset to replay
+                 currentPlayer = player1;
+                 player1.MovesCount = 0;
+                 player2.MovesCount = 0;
+                 Start();
             }
-
-            do
+            else
             {
-                Console.Write($"   Merci d'entrer le nombre de {paramName}\n   La valeur doit être plus grande que ");
-                Console.ForegroundColor = ConsoleColor.Red; Console.Write(min); Console.ResetColor();
-                Console.Write(" et plus petite que ");
-                Console.ForegroundColor = ConsoleColor.Red; Console.Write(max + "\n"); Console.ResetColor();
-                Console.Write("   Votre valeur : ");
-
-                isValid = int.TryParse(Console.ReadLine(), out value);
-
-                if (!isValid)
-                    Console.WriteLine("\n   Votre valeur n'est pas un nombre ! Merci de réessayer !\n");
-                else if (value < min || value > max)
-                    Console.WriteLine($"\n   Votre valeur n'est pas dans les limites fixées > {min} et < {max}, Merci de réessayer !\n");
-
-            } while (!isValid || value < min || value > max);
-
-            Console.WriteLine();
-            return value;
-        }
-
-        private void DisplayHelper()
-        {
-            byte basePosLeft = 14;
-            const byte STEP = 4;
-            byte startY = 6;
-            int offsetX = basePosLeft + (board.Columns) * STEP;
-
-            Console.SetCursorPosition(offsetX, startY++); Console.Write("Mode d'utilisation");
-            Console.SetCursorPosition(offsetX, startY++); Console.Write("------------------");
-            Console.SetCursorPosition(offsetX, startY++); Console.Write("\tDéplacement ->\tTouches directionnelles");
-            Console.SetCursorPosition(offsetX, startY++); Console.Write("\tJouer ->\tSpacebar ou Enter");
-            Console.SetCursorPosition(offsetX, startY++); Console.Write("\tQuitter ->\tEscape");
-            Console.SetCursorPosition(offsetX, startY++);
-            Console.ForegroundColor = player1.Color; Console.Write($"\t{player1.Name}: █");
-            Console.ForegroundColor = player2.Color; Console.Write($"\t{player2.Name}: █");
-            Console.ResetColor();
+                 Environment.Exit(0);
+            }
         }
     }
 }
